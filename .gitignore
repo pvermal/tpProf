@@ -1,0 +1,3 @@
+
+# para que git no trackee los datos que usamos para probar los modelos
+data/
