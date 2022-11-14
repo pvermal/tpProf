@@ -1,3 +1,5 @@
 
 # para que git no trackee los datos que usamos para probar los modelos
 data/
+tpProf_cars_dataset/
+runs/

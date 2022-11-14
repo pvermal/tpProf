@@ -1,3 +1,4 @@
+import argparse
 import cv2
 import logging
 import numpy as np
@@ -7,7 +8,7 @@ import time
 from torch import rand
 
 
-def generatePrediction(dataSetPath, model, showImages):
+def generatePrediction(dataSetPath, model, dirName, showImages):
     """
     Crea una carpeta 'predictions' en el mismo directorio que dataSetPath con las
     predicciones que devuelve el modelo 'model' cargado con OpenCV.
@@ -15,7 +16,7 @@ def generatePrediction(dataSetPath, model, showImages):
     resultados rápidos.
     """
 
-    predictionsPath = os.path.join(dataSetPath, "predictions")
+    predictionsPath = os.path.join(dataSetPath, dirName)
     imagesPath = os.path.join(dataSetPath, "images")
 
     for filename in os.listdir(imagesPath):
@@ -84,18 +85,19 @@ def generatePrediction(dataSetPath, model, showImages):
             f.close()
 
 
-# definition of the model
-# yolov4
-net = cv2.dnn.readNet(
-    "./models_openCV/yolov4/yolov4.weights", "./models_openCV/yolov4/yolov4.cfg"
-)
-# SSD MobileNet v3
-# net = cv2.dnn.readNet(
-#     "./models_openCV/SSD_MobileNet_V3/frozen_inference_graph.pb",
-#     "./models_openCV/SSD_MobileNet_V3/ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt",
-# )
-model = cv2.dnn_DetectionModel(net)
-model.setInputParams(size=(320, 320), scale=1 / 255)
+if __name__ == "__main__":
 
-dataSetPath = os.path.join(os.getcwd(), "test_data")
-generatePrediction(dataSetPath, model, showImages=False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--weights", type=str, help="model weights file")
+    parser.add_argument("--config", type=str, help="model configuration file")
+    parser.add_argument("--dataSetPath", type=str, help="source")
+    parser.add_argument("--dirName", type=str, help="name for the predctions directory")
+
+    opt = parser.parse_args()
+    print(opt)
+
+    # definition of the model
+    net = cv2.dnn.readNet(opt.weights, opt.config)
+    model = cv2.dnn_DetectionModel(net)
+    model.setInputParams(size=(320, 320), scale=1 / 255)
+    generatePrediction(opt.dataSetPath, model, opt.dirName, showImages=False)
