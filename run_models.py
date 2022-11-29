@@ -7,7 +7,7 @@ runYolov5 = True
 runYolov7 = True
 runOpenCv = True
 
-yolov5Params = "python ./yolov5/detect.py --source ./tpProf_cars_dataset/images --save-txt --agnostic-nms --classes 2 3 5 7 --weights ./yolov5/"
+yolov5Params = "python ./yolov5/detect.py --source ./tpProf_cars_dataset/images --save-conf --save-txt --agnostic-nms --classes 2 3 5 7 --weights ./yolov5/"
 yolov5Models = ["yolov5n.pt", "yolov5s.pt", "yolov5m.pt", "yolov5l.pt", "yolov5x.pt"]
 name = " --name "
 
@@ -20,7 +20,7 @@ if runYolov5:
         os.system(modelParams)
         logging.info("#### Finished Running: %s ####", model)
 
-yolov7Params = "python ./yolov7/detect.py --source ./tpProf_cars_dataset/images --conf 0.25 --img-size 640 --save-txt --agnostic-nms --class 2 3 5 7 --weights ./yolov7/"
+yolov7Params = "python ./yolov7/detect.py --source ./tpProf_cars_dataset/images --conf 0.25 --img-size 640 --save-conf --save-txt --agnostic-nms --class 2 3 5 7 --weights ./yolov7/"
 yolov7Models = ["yolov7-tiny.pt", "yolov7.pt", "yolov7x.pt"]
 
 # * run yolov7 models
