@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+import numpy as np
 import os
 from pathlib import Path
 import utils.score_testing_data as scoreTestingData
@@ -12,11 +13,8 @@ IMAGES = os.path.join(ROOT, r"tpProf_cars_dataset\images")
 modelsResults = {}
 for model in os.listdir(MODELS):
     # ignore the folders containing images and labels
-    if model in ["ssdMobileNetV3", "yolov4"]:
+    if model not in ["images", "labels"]:
         PREDICTIONS = os.path.join(MODELS, model, "predictions")
-        print("PREDICTIONS: ", PREDICTIONS)
-        print("LABELS: ", LABELS)
-        print("IMAGES: ", IMAGES)
         iouScoreList, qtyPredictedList, qtyTrueList = scoreTestingData.scoreTestingData(
             PREDICTIONS, LABELS, IMAGES
         )
@@ -31,11 +29,13 @@ for model in os.listdir(MODELS):
             }
         )
 
-print("modelsResults: ", modelsResults)
-# print("iouScoreList", iouScoreList)
-# print("qtyPredictedList", qtyPredictedList)
-# print("qtyTrueList", qtyTrueList)
-# print(len(qtyPredictedList))
+# average IoU for each model
+averageIou = {}
+print("Average IoU:")
+for model, values in modelsResults.items():
+    mean = np.mean(np.asarray(values["iouScoreList"]))
+    averageIou.update({model: mean})
+    print("{}: {}".format(model, mean))
 
 # * Gráficos con pruebas para sacar primeras conclusiones
 # IoU for each image in the dataset

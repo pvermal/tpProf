@@ -3,7 +3,7 @@ import os
 import utils.intersection_over_union as iou
 
 
-def scoreTestingData(testingDataPath):
+def scoreTestingData(predictionsPath, labelsPath, imagesPath):
     """
     Calcula el IoU para cada imagen de una carpeta.
     Recibe: el path a la carpeta que contiene las carpetas de images, labels y predictions.
@@ -12,17 +12,14 @@ def scoreTestingData(testingDataPath):
     objetos que realmente hay en las imagenes.
     """
 
-    PREDICTIONS = os.path.join(testingDataPath, "predictions")
-    LABELS = os.path.join(testingDataPath, "labels")
-    IMAGES = os.path.join(testingDataPath, "images")
-
     iouScoreList = []
     qtyPredictedList = []
     qtyTrueList = []
-    for filename in os.listdir(PREDICTIONS):
-        filePredicted = os.path.join(PREDICTIONS, filename)
-        fileTrue = os.path.join(LABELS, filename)
-        imgPath = os.path.join(IMAGES, filename).replace(".txt", ".jpg")
+
+    for filename in os.listdir(predictionsPath):
+        filePredicted = os.path.join(predictionsPath, filename)
+        fileTrue = os.path.join(labelsPath, filename)
+        imgPath = os.path.join(imagesPath, filename).replace(".txt", ".jpg")
 
         if os.path.isfile(filePredicted) and os.path.isfile(fileTrue):
             logging.basicConfig(level=logging.INFO)
