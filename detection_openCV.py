@@ -29,6 +29,7 @@ def generatePrediction(dataSetPath, model, dirName, showImages):
             os.mkdir(predictionsPath)
 
         img = cv2.imread(imgPath)
+        height, width, _ = img.shape
 
         detectionInitialTime = time.time()
         classIds, scores, boxes = model.detect(img)
@@ -38,10 +39,10 @@ def generatePrediction(dataSetPath, model, dirName, showImages):
         boxIdsAfterNms = cv2.dnn.NMSBoxes(
             list(boxes), scores, score_threshold=0.25, nms_threshold=0.45
         )
-
         # reshape para que queden dimensiones [1, n] -> [[a, b, ...]]
         # tomo el elemento [0] para que devuelva una lista de la forma [a, b, ...]
         boxIdsAfterNms = np.reshape(boxIdsAfterNms, (1, -1))[0]
+        scores = np.reshape(scores, (1, -1))[0]
 
         with open(predPath, "w") as f:
 
@@ -53,13 +54,15 @@ def generatePrediction(dataSetPath, model, dirName, showImages):
                 f.write(
                     str(classIds[i][0])  # clase
                     + " "
-                    + str(boxes[i][0])  # x_center
+                    + str(boxes[i][0] / width)  # x_center
                     + " "
-                    + str(boxes[i][1])  # y_center
+                    + str(boxes[i][1] / height)  # y_center
                     + " "
-                    + str(boxes[i][2])  # height
+                    + str(boxes[i][2] / height)  # height
                     + " "
-                    + str(boxes[i][3])  # width
+                    + str(boxes[i][3] / width)  # width
+                    + " "
+                    + str(scores[i])  # confidence
                     + " "
                     + str(
                         (detectionFinalTime - detectionInitialTime) * 1e3
