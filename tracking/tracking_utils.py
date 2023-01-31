@@ -239,7 +239,7 @@ class Lane(object):
         self.number = number
         self.occupyIdNow = -1
         self.occupyIdPrev = -1
-        self.outputSignal = []
+        self.outputSignal = []  # [(timestamp, isOccupiedNow)]
         self.thickness = thickness
         self.vehicleList = set()
         self.vehicleId = -1
@@ -256,8 +256,8 @@ class Lane(object):
     def getVehicleCount(self):
         return len(self.vehicleList)
 
-    def updateOutputSignal(self):
-        self.outputSignal.append(int(self.isOccupiedNow))
+    def updateOutputSignal(self, frameTime):
+        self.outputSignal.append((frameTime, int(self.isOccupiedNow)))
 
     def updateVehicleList(self, vehicleId):
         self.vehicleList.add(vehicleId)

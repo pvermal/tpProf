@@ -101,34 +101,34 @@ class KalmanBoxTracker(object):
 
     count = 0
 
-    def __init__(self, bbox):
+    def __init__(self, bbox, time):
         """
         Initialises a tracker using initial bounding box.
         """
         # define constant velocity model
-        self.kf = KalmanFilter(dim_x=7, dim_z=4)
-        self.kf.F = np.array(
-            [
-                [1, 0, 0, 0, 1, 0, 0],
-                [0, 1, 0, 0, 0, 1, 0],
-                [0, 0, 1, 0, 0, 0, 1],
-                [0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 1],
-            ]
-        )
-        self.kf.H = np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 0],
-            ]
-        )
+        # self.kf = KalmanFilter(dim_x=7, dim_z=4)
+        # self.kf.F = np.array(
+        #     [
+        #         [1, 0, 0, 0, 1, 0, 0],
+        #         [0, 1, 0, 0, 0, 1, 0],
+        #         [0, 0, 1, 0, 0, 0, 1],
+        #         [0, 0, 0, 1, 0, 0, 0],
+        #         [0, 0, 0, 0, 1, 0, 0],
+        #         [0, 0, 0, 0, 0, 1, 0],
+        #         [0, 0, 0, 0, 0, 0, 1],
+        #     ]
+        # )
+        # self.kf.H = np.array(
+        #     [
+        #         [1, 0, 0, 0, 0, 0, 0],
+        #         [0, 1, 0, 0, 0, 0, 0],
+        #         [0, 0, 1, 0, 0, 0, 0],
+        #         [0, 0, 0, 1, 0, 0, 0],
+        #     ]
+        # )
 
         # define constant acceleration model
-        t = 0.2  # sample time
+        # t = 0.2  # sample time
         # process noise variance
         qu = 100
         qv = 100
@@ -138,14 +138,14 @@ class KalmanBoxTracker(object):
         self.kf = KalmanFilter(dim_x=12, dim_z=4)
         self.kf.F = np.array(
             [
-                [1, 0, 0, 0, t, 0, 0, 0, 0.5 * (t**2), 0, 0, 0],
-                [0, 1, 0, 0, 0, t, 0, 0, 0, 0.5 * (t**2), 0, 0],
-                [0, 0, 1, 0, 0, 0, t, 0, 0, 0, 0.5 * (t**2), 0],
-                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0, t, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, t, 0, 0],
-                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, t, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, t],
+                [1, 0, 0, 0, time, 0, 0, 0, 0.5 * (time**2), 0, 0, 0],
+                [0, 1, 0, 0, 0, time, 0, 0, 0, 0.5 * (time**2), 0, 0],
+                [0, 0, 1, 0, 0, 0, time, 0, 0, 0, 0.5 * (time**2), 0],
+                [0, 0, 0, 1, 0, 0, 0, time, 0, 0, 0, 0.5 * (time**2)],
+                [0, 0, 0, 0, 1, 0, 0, 0, time, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, time, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, time, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, time],
                 [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
@@ -165,41 +165,67 @@ class KalmanBoxTracker(object):
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [
                     0,
-                    0.25 * qu * (t**4),
+                    0.25 * qu * (time**4),
                     0,
                     0,
                     0,
-                    0.5 * qu * (t**3),
+                    0.5 * qu * (time**3),
                     0,
                     0,
                     0,
-                    0.5 * qu * (t**2),
+                    0.5 * qu * (time**2),
                     0,
                     0,
                 ],
                 [
                     0,
                     0,
-                    0.25 * qv * (t**4),
+                    0.25 * qv * (time**4),
                     0,
                     0,
                     0,
-                    0.5 * qv * (t**3),
+                    0.5 * qv * (time**3),
                     0,
                     0,
                     0,
-                    0.5 * qv * (t**2),
+                    0.5 * qv * (time**2),
                     0,
                 ],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0.5 * qu * (t**3), 0, 0, 0, qu * (t**2), 0, 0, 0, qu * t, 0, 0],
-                [0, 0, 0.5 * qv * (t**3), 0, 0, 0, qv * (t**2), 0, 0, 0, qv * t, 0],
-                [0, 0, 0, 0, 0, 0, 0, qs * (t**2), 0, 0, 0, qs * t],
+                [
+                    0,
+                    0.5 * qu * (time**3),
+                    0,
+                    0,
+                    0,
+                    qu * (time**2),
+                    0,
+                    0,
+                    0,
+                    qu * time,
+                    0,
+                    0,
+                ],
+                [
+                    0,
+                    0,
+                    0.5 * qv * (time**3),
+                    0,
+                    0,
+                    0,
+                    qv * (time**2),
+                    0,
+                    0,
+                    0,
+                    qv * time,
+                    0,
+                ],
+                [0, 0, 0, 0, 0, 0, 0, qs * (time**2), 0, 0, 0, qs * time],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0.5 * qu * (t**2), 0, 0, 0, qu * t, 0, 0, 0, qu, 0, 0],
-                [0, 0, 0.5 * qv * (t**2), 0, 0, 0, qv * t, 0, 0, 0, qv, 0],
-                [0, 0, 0, 0, 0, 0, 0, qs * t, 0, 0, 0, qs],
+                [0, 0.5 * qu * (time**2), 0, 0, 0, qu * time, 0, 0, 0, qu, 0, 0],
+                [0, 0, 0.5 * qv * (time**2), 0, 0, 0, qv * time, 0, 0, 0, qv, 0],
+                [0, 0, 0, 0, 0, 0, 0, qs * time, 0, 0, 0, qs],
             ]
         )
         self.kf.Q *= varAcc
@@ -312,7 +338,7 @@ class Sort(object):
         self.trackers = []
         self.frame_count = 0
 
-    def update(self, dets=np.empty((0, 5))):
+    def update(self, dets=np.empty((0, 5)), time=1):
         """
         Params:
           dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
@@ -344,7 +370,7 @@ class Sort(object):
 
         # create and initialise new trackers for unmatched detections
         for i in unmatched_dets:
-            trk = KalmanBoxTracker(dets[i, :])
+            trk = KalmanBoxTracker(dets[i, :], time)
             self.trackers.append(trk)
         i = len(self.trackers)
         for trk in reversed(self.trackers):
