@@ -7,8 +7,9 @@ import sys
 import time
 import torch
 
-sys.path.insert(0, "C:/PV/GitFiles/tpProf/tracking")
-sys.path.insert(0, "C:/PV/GitFiles/tpProf/sort")
+sys.path.insert(0, "tracking")
+sys.path.insert(0, "sort")
+sys.path.insert(0, "videos")
 
 from sort import *
 from tracking_utils import box, boxXyxy, DrawLaneCoordinates, Lane
@@ -22,10 +23,8 @@ min_hits = 3
 number_of_lanes = 6
 # video params
 save_video = True
-output_video = (
-    "C:/PV/FIUBA/tpProf/videos/normal_fps/puente_BA_centro_lejos_1/count_vehicles.mp4"
-)
-fps = 30
+output_video = "videos/5fps/puente_BA_centro_lejos_1_5fps/count_vehicles.mp4"
+fps = 5
 # video_shape = (480, 854)  # (height, width)
 
 # * load  detection model and configuration
@@ -37,8 +36,8 @@ model.classes = [2, 3, 5, 7]  # car, motorcycle, bus, truck
 tracker = Sort(max_age=max_age, min_hits=min_hits, iou_threshold=iou_threshold)
 
 # load images/video/webcam
-testImg = "C:/PV/FIUBA/tpProf/videos/normal_fps/puente_BA_centro_lejos_1/images/puente_BA_centro_lejos_1_0.jpg"
-testFolder = "C:/PV/FIUBA/tpProf/videos/normal_fps/puente_BA_centro_lejos_1/images"
+testImg = "videos/5fps/puente_BA_centro_lejos_1_5fps/images/puente_BA_centro_lejos_1_5fps_0.jpg"
+testFolder = "videos/5fps/puente_BA_centro_lejos_1_5fps/images"
 
 if save_video:
     video_shape = list(cv2.imread(testImg).shape)[:-1]
@@ -98,8 +97,7 @@ for frameName in sorted(
     ## for trackedVehicle in trackedVehicles:
     ## check is the detection is inside any of the lanes
     for lane in lanes:
-        # check if there is any vehicle in the lane
-        lane.setIsOccupiedNow(False, -1)
+        isOccupied = False
         ## for lane in lanes:
         for trackedVehicle in trackedVehicles:
             # calculate center points
@@ -114,9 +112,14 @@ for frameName in sorted(
                 )
                 == 1
             ):
-                # lane is occupied
+                # Update lane is occupied
+                isOccupied = True
                 lane.updateVehicleList(trackedVehicle[-1])  # add vehicle ID to the list
-                lane.setIsOccupiedNow(True, trackedVehicle[-1])
+                lane.updateIsOccupied(True, trackedVehicle[-1])
+                break
+
+        if not isOccupied:
+            lane.updateIsOccupied(False, -1)
 
         lane.updateOutputSignal(frameTime)
 

@@ -262,13 +262,13 @@ class Lane(object):
     def updateVehicleList(self, vehicleId):
         self.vehicleList.add(vehicleId)
 
-    def setIsOccupiedNow(self, isOccupied, id):
+    def updateIsOccupied(self, isOccupied, id):
+        # First, update the "Prev" variables
+        self.isOccupiedPrev = self.isOccupiedNow
+        self.occupyIdPrev = self.occupyIdNow
+        # Then, update the "Now" variables
         self.isOccupiedNow = isOccupied
         self.occupyIdNow = id
-
-    def setIsOccupiedPrev(self, isOccupied, id):
-        self.isOccupiedPrev = isOccupied
-        self.occupyIdPrev = id
 
 
 # ! PENSAR COMO ARMAR ESTO

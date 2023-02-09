@@ -1,0 +1,2 @@
+-r sort/requirements.txt
+-r yolov5/requirements.txt
