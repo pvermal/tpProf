@@ -7,8 +7,8 @@ import sys
 import time
 import torch
 
-sys.path.insert(0, "C:/PV/GitFiles/tpProf/tracking")
-sys.path.insert(0, "C:/PV/GitFiles/tpProf/sort")
+sys.path.insert(0, "tracking")
+sys.path.insert(0, "sort")
 
 from sort import *
 from tracking_utils import box, boxXyxy, DrawLaneCoordinates, Lane
