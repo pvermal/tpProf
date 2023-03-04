@@ -34,15 +34,25 @@ averageTimes = {}
 print("Average processing time:")
 for model, values in modelTimes.items():
     mean = np.mean(np.asarray(values))
+    var = np.var(np.asarray(values))
     averageTimes.update({model: mean})
-    print("{}: {} ms".format(model, mean))
+    print("{}: {} +- {} ms".format(model, mean, var))
 
 # plot times for each model
 plt.figure()
 for model, times in modelTimes.items():
     plt.plot(times, label=model)
-
 plt.title("Time taken for each image")
+plt.xlabel("Image n°")
+plt.ylabel("Time")
+plt.legend()
+
+# compare nano models
+plt.figure()
+for model, times in modelTimes.items():
+    if model in ["yolov5n.pt", "yolov8n.pt"]:
+        plt.plot(times, label=model)
+plt.title("Time taken for each image (nano models)")
 plt.xlabel("Image n°")
 plt.ylabel("Time")
 plt.legend()

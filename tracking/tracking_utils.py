@@ -49,7 +49,7 @@ def box(img, x, y, h, w, id, color=(0, 0, 255), thickness=1, printXY=False):
     return img
 
 
-def boxXyxy(img, x1, y1, x2, y2, id, color=(0, 0, 255), thickness=1, printXY=False):
+def boxXyxy(img, x1, y1, x2, y2, id="", color=(0, 0, 255), thickness=1, printXY=False):
     """
     Recibe una imagen, las coordenadas para dibujar la caja y el numero de id.
     Devuelve la imagen con la caja dibujada y el numero de id.
@@ -79,7 +79,7 @@ def boxXyxy(img, x1, y1, x2, y2, id, color=(0, 0, 255), thickness=1, printXY=Fal
     font = cv2.FONT_HERSHEY_SIMPLEX
     cv2.putText(
         img,
-        str(int(id)),
+        id if isinstance(id, str) else str(int(id)),
         (int(x1) + 5, int(y1) + 15),
         fontFace=font,
         fontScale=0.5,
@@ -208,7 +208,7 @@ def tracking2Video(outputVideo, fps, imgsPath, detectionsPath):
 class DrawLaneCoordinates(object):
     def __init__(self, img, color, thickness):
         self.coordinates = []
-        self.image = cv2.imread(img)
+        self.image = img
         self.color = color
         self.thickness = thickness
         self.windowName = "DrawLanes"

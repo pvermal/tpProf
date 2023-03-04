@@ -1,3 +1,4 @@
+from ultralytics import YOLO
 import logging
 import os
 
@@ -5,6 +6,7 @@ logging.basicConfig(level=logging.INFO)
 
 runYolov5 = True
 runYolov7 = True
+runYolov8 = True
 runOpenCv = True
 
 yolov5Params = "python ./yolov5/detect.py --source ./tpProf_cars_dataset/images --save-conf --save-txt --agnostic-nms --classes 2 3 5 7 --weights ./yolov5/"
@@ -32,7 +34,21 @@ if runYolov7:
         os.system(modelParams)
         logging.info("#### Finished Running: %s ####", model)
 
-# * models running with OpenCV
+yolov8Models = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
+
+# * run yolov8 models
+for model in yolov8Models:
+    model = YOLO(model)
+    results = model.predict(
+        source="./tpProf_cars_dataset/images",
+        save=True,
+        save_txt=True,
+        save_conf=True,
+        agnostic_nms=True,
+        classes=[2, 3, 5, 7],
+        verbose=True,
+    )
+
 yolov3 = {
     "name": "yolov3",
     "weights": "./models_openCV/yolov3/yolov3.weights",
