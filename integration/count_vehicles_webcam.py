@@ -72,7 +72,7 @@ def count_vehicles_webcam(
     ]
 
     # webcam stream
-    cam = cv2.VideoCapture(1)
+    cam = cv2.VideoCapture("udp://192.168.0.10:9999")
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
