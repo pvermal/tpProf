@@ -71,9 +71,11 @@ def count_vehicles_images(
     cam = cv2.VideoCapture(1)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-
+    
+    frameNumber = 0
+    videoFpsAvg = 0
     key = cv2.waitKey(1)
-
+    
     for frameName in sorted(
         os.listdir(images_dir),
         key=lambda x: int(
@@ -150,7 +152,7 @@ def count_vehicles_images(
                 "Detection time: {} ms".format(round((t1 - t0) * 1000, 3)),
                 "Tracking time: {} ms".format(round((t3 - t2) * 1000, 3)),
             )
-
+            
         # * display results and save video
         if display or save_video:
             # plot lanes
@@ -193,12 +195,38 @@ def count_vehicles_images(
                     thickness=-1,
                 )
 
+                
+            if frameNumber < 50:
+                frameNumber = frameNumber + 1
+                
             if save_video:
                 video.write(frame)
 
             if display:
+                videoFPS = 1 / (time.time() - frameTime)
+                videoFpsAvg = videoFpsAvg * (frameNumber - 1) / (
+                    frameNumber
+                ) + videoFPS / (frameNumber)
+                cv2.putText(
+                    img=frame,
+                    text="FPS intant: {}".format(round(videoFPS, 2)),
+                    org=(640 - 10, 30),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=1,
+                    color=(0, 171, 255),
+                    thickness=2,
+                )
+                cv2.putText(
+                    img=frame,
+                    text="FPS average: {}".format(round(videoFpsAvg, 2)),
+                    org=(640 - 10, 60),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=1,
+                    color=(0, 171, 255),
+                    thickness=2,
+                )
                 cv2.imshow("detections", frame)
-                cv2.waitKey(int(1000 / fps))
+                cv2.waitKey(int(1 / fps))
 
 
 # matplotlib.use("TkAgg")
