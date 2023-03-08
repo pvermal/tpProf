@@ -7,8 +7,8 @@ import sys
 import time
 import torch
 
-sys.path.insert(0, "C:/PV/GitFiles/tpProf/tracking")
-sys.path.insert(0, "C:/PV/GitFiles/tpProf/sort")
+sys.path.insert(0, "tracking")
+sys.path.insert(0, "sort")
 
 from sort import *
 from tracking_utils import box, boxXyxy, DrawLaneCoordinates, Lane
@@ -81,8 +81,6 @@ def count_vehicles_images(
         ),  # works for images in the test format we have: name_i.jpg
     ):
         frame = cv2.imread(os.path.join(images_dir, frameName))
-
-        print("fps: {}".format(cam.get(cv2.CAP_PROP_FPS)))
 
         frameTime = time.time()
 
