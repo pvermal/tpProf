@@ -22,6 +22,7 @@ import numpy as np
 import glob
 import time
 import argparse
+import torch
 from filterpy.kalman import KalmanFilter
 
 np.random.seed(0)
@@ -44,8 +45,21 @@ def iou_batch(bb_test, bb_gt):
     """
     From SORT: Computes IOU between two bboxes in the form [x1,y1,x2,y2]
     """
-    bb_gt = np.expand_dims(bb_gt, 0)
-    bb_test = np.expand_dims(bb_test, 1)
+    try:
+    	bb_gt = np.expand_dims(bb_gt, 0)
+    except TypeError:
+        bb_gt = torch.from_numpy(bb_gt).cpu().numpy()
+        bb_gt = np.expand_dims(bb_gt, 0)
+
+    try:
+    	bb_test = np.expand_dims(bb_test, 1)
+    except TypeError:
+    	try:
+            bb_test = torch.from_numpy(bb_test).cpu().numpy()
+    	except TypeError:
+            bb_test = bb_test.cpu().numpy()
+    	bb_test = np.expand_dims(bb_test, 1)
+    
 
     xx1 = np.maximum(bb_test[..., 0], bb_gt[..., 0])
     yy1 = np.maximum(bb_test[..., 1], bb_gt[..., 1])
@@ -74,8 +88,10 @@ def convert_bbox_to_z(bbox):
     y = bbox[1] + h / 2.0
     s = w * h  # scale is just area
     r = w / float(h)
-    return np.array([x, y, s, r]).reshape((4, 1))
-
+    try:
+    	return np.array([x, y, s, r]).reshape((4, 1))
+    except TypeError:
+        return torch.tensor([x, y, s, r]).reshape((4, 1)).cpu().numpy()
 
 def convert_x_to_bbox(x, score=None):
     """
