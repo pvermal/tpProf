@@ -9,7 +9,8 @@ logging.basicConfig(level=logging.INFO)
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]
-MODELS = os.path.join(ROOT, r"tpProf_cars_dataset")
+#MODELS = os.path.join(ROOT, r"tpProf_cars_dataset")
+MODELS = os.path.join(ROOT, r"runs/detect")
 
 modelTimes = {}
 for model in os.listdir(MODELS):
@@ -17,8 +18,9 @@ for model in os.listdir(MODELS):
     if model not in ["images", "labels"]:
         logging.info("Getting time for model {}.".format(model))
         modelTimes.update({model: []})
-        PREDICTIONS = os.path.join(MODELS, model, "predictions")
-
+        #PREDICTIONS = os.path.join(MODELS, model, "predictions")
+        PREDICTIONS = os.path.join(MODELS, model, "labels")
+        
         for file in os.listdir(PREDICTIONS):
             FILE = os.path.join(PREDICTIONS, file)
             with open(FILE) as csvFilePredicted:
