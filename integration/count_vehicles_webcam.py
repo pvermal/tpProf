@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
 from ultralytics import YOLO
+import csv
 import cv2
 import matplotlib
 import numpy as np
@@ -13,7 +14,9 @@ sys.path.insert(0, "sort")
 sys.path.insert(0, "videos")
 
 from sort import *
-from tracking_utils import box, boxXyxy, DrawLaneCoordinates, Lane
+from tracking_utils import box, boxXyxy, divideChunks, DrawLaneCoordinates, Lane
+
+CSV_CONFIGURATION_PATH = "./configuration/lanes.csv"
 
 
 def count_vehicles_webcam(
@@ -71,7 +74,36 @@ def count_vehicles_webcam(
         (0, 255, 16),
     ]
 
+    # * initialize the lanes if there's a configuration file (lanes.csv)
+    if os.path.exists(CSV_CONFIGURATION_PATH):
+        with open(CSV_CONFIGURATION_PATH, "r") as csvFile:
+            csvLanes = csv.reader(csvFile)
+
+            print("Initializing lanes with lanes.csv")
+
+            for laneNumber, csvLane in enumerate(csvLanes, 1):
+                # converts the format from the csv
+                # [x1, y1, x2, y2, x3, y3, x4, y4] to
+                # [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
+                # which is the format expected by Lane class
+                formattedLane = list(divideChunks([int(l) for l in csvLane], 2))
+
+                if laneNumber <= number_of_lanes:
+                    lanes.append(
+                        Lane(
+                            coordinates=formattedLane,
+                            number=laneNumber,
+                            color=colors[laneNumber - 1],
+                            thickness=2,
+                        )
+                    )
+                else:
+                    break
+
+            csvFile.close()
+
     # webcam stream
+    # cam = cv2.VideoCapture(1)  # ! use this this for OBS virtualCam
     cam = cv2.VideoCapture("udp://192.168.0.7:9999")
     cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -93,6 +125,10 @@ def count_vehicles_webcam(
         if key == ord("l"):
             lanes = []
             for i in range(number_of_lanes):
+                # delete the old configuration file at start
+                if i == 0 and os.path.exists(CSV_CONFIGURATION_PATH):
+                    os.remove(CSV_CONFIGURATION_PATH)
+
                 laneNumber = i + 1
                 laneCoordinates = DrawLaneCoordinates(
                     frame, color=colors[i], thickness=2
@@ -105,6 +141,21 @@ def count_vehicles_webcam(
                         thickness=2,
                     )
                 )
+                # save the lane configuration in a csv file
+                with open(CSV_CONFIGURATION_PATH, "a", newline="") as csvFile:
+                    csvWriter = csv.writer(csvFile)
+                    # flatten [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
+                    # to [x1, y1, x2, y2, x3, y3, x4, y4]
+                    # and save that to the csv file
+                    csvWriter.writerow(
+                        [
+                            coordinate
+                            for point in laneCoordinates.coordinates
+                            for coordinate in point
+                        ]
+                    )
+
+            csvFile.close()
 
         t0 = time.time()
         # * run detection algorithm

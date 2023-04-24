@@ -152,6 +152,11 @@ def detections2Sort(predictionsPath, outPath, outName, imgShape):
     out_file.write(out_csv)
     out_file.close()
 
+# split list "l" into chunks of size "n"
+def divideChunks(l, n):
+    for i in range(0, len(l), n):
+        yield l[i : i + n]
+
 
 def getImgShape(imgBasePath):
     """
