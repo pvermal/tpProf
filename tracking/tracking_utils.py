@@ -235,46 +235,98 @@ class DrawLaneCoordinates(object):
 
 
 class Lane(object):
-    def __init__(self, coordinates, number, color=(255, 0, 0), thickness=2):
-        self.color = color
-        self.coordinates = coordinates
-        self.isOccupiedNow = False
-        self.isOccupiedPrev = False
-        self.isVehicle = False
-        self.number = number
-        self.occupyIdNow = -1
-        self.occupyIdPrev = -1
-        self.outputSignal = []  # [(timestamp, isOccupiedNow)]
-        self.thickness = thickness
-        self.vehicleList = set()
-        self.vehicleId = -1
+    def __init__(self, coordinates, laneID, color=(255, 0, 0), thickness=2):
+        # plot and coordinates atributes
+        self.color = color  # lane's color in the plot
+        self.thickness = thickness  # lane's thickness in the plot
+        self.coordinates = coordinates  # lane's coordinates in the image/video
+        # signal atributes
+        self.laneID = laneID  # lane's unique ID
+        self.buffer = Buffer()
+        self.vehicleList = set()  # set with uniques IDs
+        self.lastDetectedId = -1 # save the last value real vehicle (!= '-1')
+        self.lastIsOccupied = False # save the last value flag of Occupied
 
     def getCoordinates(self):
         return self.coordinates
 
-    def getNumber(self):
-        return self.number
+    def getLaneID(self):
+        return self.laneID
 
-    def getOutputSignal(self):
-        return self.outputSignal
+    def getOutputValue(self): #A REVISAR ESTA ACCION, SU NOMBRE Y SU COMPORTAMIENTO
+        return self.Dequeue()
 
-    def getVehicleCount(self):
+    def getVehicleListCount(self):
         return len(self.vehicleList)
 
-    def updateOutputSignal(self, frameTime):
-        self.outputSignal.append((frameTime, int(self.isOccupiedNow)))
+    def updateIsOccupied(self, isOccupied, id, timeStamp):
+        self.vehicleList.add(id)  # add vehicleID to the list
+        self.buffer.Enqueue(isOccupied, id, timeStamp)  # add sample to the Signal
+        self.lastIsOccupied = isOccupied # save the flag
+        if id != -1 :
+            self.lastDetectedId = id # save the last value
 
-    def updateVehicleList(self, vehicleId):
-        self.vehicleList.add(vehicleId)
+    def getLastDetectedId(self):
+        return self.lastDetectedId
+    
+    def getLastIsOccupied(self):
+        return self.lastIsOccupied
 
-    def setIsOccupiedNow(self, isOccupied, id):
-        self.isOccupiedNow = isOccupied
-        self.occupyIdNow = id
+    def correctBackwards(self, id):
+        self.buffer.SwitchValuesToLastDifferent(True, id)
 
-    def setIsOccupiedPrev(self, isOccupied, id):
-        self.isOccupiedPrev = isOccupied
-        self.occupyIdPrev = id
 
+class Buffer(object):
+    def __init__(self, capacity=50):
+        self.capacity = capacity  # indicates the maximum size of the buffer
+        self.actualSize = 0  # indicates the actual size of the buffer
+        self.data = (
+            []
+        )  # List of dictionaries [{"isOccuppied": isOccupied, "vehicleId": id,"timeStamp": timeStamp}]
+
+    def Enqueue(self, isOccuppied, vehicleID, timeStamp):
+        if len(self.data) == self.capacity:
+            raise Exception("Buffer full. First Dequeue")
+
+        else:
+            self.data.append(
+                [{"isOccuppied": isOccupied, "vehicleId": vehicleID, "timeStamp": timeStamp}]
+            )
+
+    def Dequeue(self):
+        if len(self.data) == 0:
+            print("Buffer empty. First Enqueue some item")
+            return None
+
+        else:
+            retValue = self.data.remove()
+
+        return retValue
+
+    def isFull(self):
+        if len(self.data) == self.capacity:
+            return True
+
+        else:
+            return False
+
+    def SwitchValuesToLastDifferent(self, valueToSet, idToSet):
+        if len(self.data) == 0:
+            return
+
+        valueToSwitch = self.data[-1]["isOccuppied"]
+
+        for index in range(len(self.data) - 1):
+            if (
+                self.data[-1 - index]["isOccuppied"] == valueToSwitch
+            ):
+                self.data[-1 - index]["isOccuppied"] = valueToSet
+                self.data[-1 - index]["isOccuppied"] = idToSet
+                index += 1
+            else
+                break
+
+        return
 
 # ! PENSAR COMO ARMAR ESTO
 class Vehicle(object):
@@ -301,7 +353,3 @@ class Vehicle(object):
         self.y = (y1 + y2) / 2
         self.y1 = y1
         self.y2 = y2
-
-
-# class VirtualLoop(object):
-#     def __init__(self):
