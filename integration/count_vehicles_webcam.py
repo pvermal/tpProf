@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import torch
+import threading
 
 sys.path.insert(0, "tracking")
 sys.path.insert(0, "sort")
@@ -92,7 +93,7 @@ def count_vehicles_webcam(
                     lanes.append(
                         Lane(
                             coordinates=formattedLane,
-                            number=laneNumber,
+                            laneID=laneNumber,
                             color=colors[laneNumber - 1],
                             thickness=2,
                         )
@@ -104,10 +105,28 @@ def count_vehicles_webcam(
 
     # webcam stream
     # cam = cv2.VideoCapture(1)  # ! use this this for OBS virtualCam
-    cam = cv2.VideoCapture("udp://192.168.0.7:9999")
-    cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    # cam = cv2.VideoCapture("udp://192.168.0.7:9999")
+    # cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    # cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    # cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+    # Define a function to run when the timer expires
+    def timer_handler():
+        print("Timer expired!")
+        for lane in lanes:
+            print(lane.getOutputValue())
+        # Restart the timer
+        timer = threading.Timer(0.25, timer_handler)
+        timer.start()
+        return
+
+    # Set up a timer using the Timer class
+    timer = threading.Timer(0.25, timer_handler)
+
+    # Start the timer
+    timer.start()
+
+    cam = cv2.VideoCapture(1)  # ! use this this for OBS virtualCam
 
     frameNumber = 0
     videoFpsAvg = 0
@@ -136,7 +155,7 @@ def count_vehicles_webcam(
                 lanes.append(
                     Lane(
                         coordinates=laneCoordinates.coordinates,
-                        number=laneNumber,
+                        laneID=laneNumber,
                         color=colors[i],
                         thickness=2,
                     )
@@ -182,7 +201,7 @@ def count_vehicles_webcam(
         # * generate output signal
         for lane in lanes:
             # check if there is any vehicle in the lane
-            lane.setIsOccupiedNow(False, -1)
+            # lane.setIsOccupiedNow(False, -1)
 
             for trackedVehicle in trackedVehicles:
                 # calculate center points
@@ -198,12 +217,21 @@ def count_vehicles_webcam(
                     == 1
                 ):
                     # lane is occupied
-                    lane.updateVehicleList(
-                        trackedVehicle[-1]
-                    )  # add vehicle ID to the list
-                    lane.setIsOccupiedNow(True, trackedVehicle[-1])
+                    # lane.updateVehicleList(
+                    #    trackedVehicle[-1]
+                    # )  # add vehicle ID to the list
+                    # lane.setIsOccupiedNow(True, trackedVehicle[-1])
+                    actualDetectedId = trackedVehicle[-1]
+                    lastDetectedId = lane.getLastDetectedId
+                    lastIsOccupied = lane.getLastIsOccupied
+                    if lastDetectedId == actualDetectedId and lastIsOccupied == False:
+                        lane.correctBackwards(actualDetectedId)
+                    lane.updateIsOccupied(True, actualDetectedId, frameTime)
+                    lastIsOccupied = True
+                    break
 
-            lane.updateOutputSignal(frameTime)
+            # lane.updateOutputSignal(frameTime)
+            lane.updateIsOccupied(False, -1, frameTime)
 
         # * log times:
         if showLogTimes:
@@ -229,8 +257,10 @@ def count_vehicles_webcam(
                 )
                 cv2.putText(
                     img=frame,
-                    text="Lane {}: {}".format(lane.getNumber(), lane.getVehicleCount()),
-                    org=(30, lane.number * 30),
+                    text="Lane {}: {}".format(
+                        lane.getLaneID(), lane.getVehicleListCount()
+                    ),
+                    org=(30, lane.getLaneID() * 30),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=1,
                     color=lane.color,
@@ -284,33 +314,35 @@ def count_vehicles_webcam(
                 ) + videoFPS / (frameNumber)
                 cv2.putText(
                     img=frame,
-                    text="FPS intant: {}".format(round(videoFPS, 2)),
-                    org=(640 - 10, 30),
+                    text="FPS instant:  {:.2f}".format(round(videoFPS, 2)),
+                    org=(640 - 200, 30),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=1,
+                    fontScale=1 * 0.6,
                     color=(0, 171, 255),
                     thickness=2,
                 )
                 cv2.putText(
                     img=frame,
-                    text="FPS average: {}".format(round(videoFpsAvg, 2)),
-                    org=(640 - 10, 60),
+                    text="FPS average: {:.2f}".format(round(videoFpsAvg, 2)),
+                    org=(640 - 200, 60),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=1,
+                    fontScale=1 * 0.6,
                     color=(0, 171, 255),
                     thickness=2,
                 )
                 cv2.imshow("detections", frame)
                 key = cv2.waitKey(1)
 
+    # matplotlib.use("TkAgg")
+    # fig, axs = plt.subplots(number_of_lanes)
+    # for idx, lane in enumerate(lanes):
+    #     axs[idx].plot(
+    #         np.array(lane.getOutputSignal())[:, 0],
+    #         np.array(lane.getOutputSignal())[:, 1],
+    #         label=lane.number,
+    #     )
+    #     axs[idx].set_title("Lane {}".format(lane.number))
+    # plt.show()
 
-# matplotlib.use("TkAgg")
-# fig, axs = plt.subplots(number_of_lanes)
-# for idx, lane in enumerate(lanes):
-#     axs[idx].plot(
-#         np.array(lane.getOutputSignal())[:, 0],
-#         np.array(lane.getOutputSignal())[:, 1],
-#         label=lane.number,
-#     )
-#     axs[idx].set_title("Lane {}".format(lane.number))
-# plt.show()
+    # Cancel the timer
+    timer.cancel()

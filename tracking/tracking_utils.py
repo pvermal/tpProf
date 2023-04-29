@@ -152,6 +152,7 @@ def detections2Sort(predictionsPath, outPath, outName, imgShape):
     out_file.write(out_csv)
     out_file.close()
 
+
 # split list "l" into chunks of size "n"
 def divideChunks(l, n):
     for i in range(0, len(l), n):
@@ -235,17 +236,19 @@ class DrawLaneCoordinates(object):
 
 
 class Lane(object):
-    def __init__(self, coordinates, laneID, color=(255, 0, 0), thickness=2):
+    def __init__(
+        self, coordinates, laneID, color=(255, 0, 0), thickness=2, buff_size=100
+    ):
         # plot and coordinates atributes
         self.color = color  # lane's color in the plot
         self.thickness = thickness  # lane's thickness in the plot
         self.coordinates = coordinates  # lane's coordinates in the image/video
         # signal atributes
         self.laneID = laneID  # lane's unique ID
-        self.buffer = Buffer()
+        self.buffer = Buffer(buff_size)
         self.vehicleList = set()  # set with uniques IDs
-        self.lastDetectedId = -1 # save the last value real vehicle (!= '-1')
-        self.lastIsOccupied = False # save the last value flag of Occupied
+        self.lastDetectedId = -1  # save the last value real vehicle (!= '-1')
+        self.lastIsOccupied = False  # save the last value flag of Occupied
 
     def getCoordinates(self):
         return self.coordinates
@@ -253,8 +256,8 @@ class Lane(object):
     def getLaneID(self):
         return self.laneID
 
-    def getOutputValue(self): #A REVISAR ESTA ACCION, SU NOMBRE Y SU COMPORTAMIENTO
-        return self.Dequeue()
+    def getOutputValue(self):  # A REVISAR ESTA ACCION, SU NOMBRE Y SU COMPORTAMIENTO
+        return self.buffer.Dequeue()
 
     def getVehicleListCount(self):
         return len(self.vehicleList)
@@ -262,13 +265,13 @@ class Lane(object):
     def updateIsOccupied(self, isOccupied, id, timeStamp):
         self.vehicleList.add(id)  # add vehicleID to the list
         self.buffer.Enqueue(isOccupied, id, timeStamp)  # add sample to the Signal
-        self.lastIsOccupied = isOccupied # save the flag
-        if id != -1 :
-            self.lastDetectedId = id # save the last value
+        self.lastIsOccupied = isOccupied  # save the flag
+        if id != -1:
+            self.lastDetectedId = id  # save the last value
 
     def getLastDetectedId(self):
         return self.lastDetectedId
-    
+
     def getLastIsOccupied(self):
         return self.lastIsOccupied
 
@@ -282,15 +285,21 @@ class Buffer(object):
         self.actualSize = 0  # indicates the actual size of the buffer
         self.data = (
             []
-        )  # List of dictionaries [{"isOccuppied": isOccupied, "vehicleId": id,"timeStamp": timeStamp}]
+        )  # List of dictionaries [{"isOccupied": isOccupied, "vehicleId": id,"timeStamp": timeStamp}]
 
-    def Enqueue(self, isOccuppied, vehicleID, timeStamp):
+    def Enqueue(self, isOccupied, vehicleID, timeStamp):
         if len(self.data) == self.capacity:
             raise Exception("Buffer full. First Dequeue")
 
         else:
             self.data.append(
-                [{"isOccuppied": isOccupied, "vehicleId": vehicleID, "timeStamp": timeStamp}]
+                [
+                    {
+                        "isOccupied": isOccupied,
+                        "vehicleId": vehicleID,
+                        "timeStamp": timeStamp,
+                    }
+                ]
             )
 
     def Dequeue(self):
@@ -299,7 +308,8 @@ class Buffer(object):
             return None
 
         else:
-            retValue = self.data.remove()
+            retValue = self.data[0]
+            del self.data[0]
 
         return retValue
 
@@ -314,19 +324,18 @@ class Buffer(object):
         if len(self.data) == 0:
             return
 
-        valueToSwitch = self.data[-1]["isOccuppied"]
+        valueToSwitch = self.data[-1]["isOccupied"]
 
         for index in range(len(self.data) - 1):
-            if (
-                self.data[-1 - index]["isOccuppied"] == valueToSwitch
-            ):
-                self.data[-1 - index]["isOccuppied"] = valueToSet
-                self.data[-1 - index]["isOccuppied"] = idToSet
+            if self.data[-1 - index]["isOccupied"] == valueToSwitch:
+                self.data[-1 - index]["isOccupied"] = valueToSet
+                self.data[-1 - index]["isOccupied"] = idToSet
                 index += 1
-            else
+            else:
                 break
 
         return
+
 
 # ! PENSAR COMO ARMAR ESTO
 class Vehicle(object):
