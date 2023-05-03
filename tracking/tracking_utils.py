@@ -237,7 +237,7 @@ class DrawLaneCoordinates(object):
 
 class Lane(object):
     def __init__(
-        self, coordinates, laneID, color=(255, 0, 0), thickness=2, buff_size=100
+        self, coordinates, laneID, color=(255, 0, 0), thickness=2, buff_size=20
     ):
         # plot and coordinates atributes
         self.color = color  # lane's color in the plot
@@ -285,7 +285,7 @@ class Buffer(object):
         self.actualSize = 0  # indicates the actual size of the buffer
         self.data = (
             []
-        )  # List of dictionaries [{"isOccupied": isOccupied, "vehicleId": id,"timeStamp": timeStamp}]
+        )  # List of dictionaries {"isOccupied": isOccupied, "vehicleId": id,"timeStamp": timeStamp}
 
     def Enqueue(self, isOccupied, vehicleID, timeStamp):
         if len(self.data) == self.capacity:
@@ -293,14 +293,13 @@ class Buffer(object):
 
         else:
             self.data.append(
-                [
-                    {
-                        "isOccupied": isOccupied,
-                        "vehicleId": vehicleID,
-                        "timeStamp": timeStamp,
-                    }
-                ]
+                {
+                    "isOccupied": isOccupied,
+                    "vehicleId": vehicleID,
+                    "timeStamp": timeStamp,
+                }
             )
+            self.actualSize += 1
 
     def Dequeue(self):
         if len(self.data) == 0:
@@ -308,10 +307,11 @@ class Buffer(object):
             return None
 
         else:
+            self.actualSize -= 1
             retValue = self.data[0]
             del self.data[0]
-
-        return retValue
+            return retValue
+            # return self.data.pop(0)
 
     def isFull(self):
         if len(self.data) == self.capacity:

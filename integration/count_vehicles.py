@@ -67,7 +67,7 @@ def parse_args():
         default=1,
     )
     parser.add_argument(
-        "--number_of_lanes", help="Number of lanes to measure.", type=int, default=1
+        "--number_of_lanes", help="Number of lanes to measure.", type=int, default=-1
     )
     parser.add_argument(
         "--fps", help="Aproximate fps of the selected stream.", type=int, default=30
@@ -78,7 +78,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-
     args = parse_args()
     print(args)
 

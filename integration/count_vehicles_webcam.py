@@ -1,14 +1,16 @@
+import matplotlib
 from matplotlib import pyplot as plt
+import matplotlib.animation as animation
 from ultralytics import YOLO
 import csv
 import cv2
-import matplotlib
 import numpy as np
 import os
 import sys
 import time
 import torch
-import threading
+
+matplotlib.rcParams["backend"] = "Qt5Agg"
 
 sys.path.insert(0, "tracking")
 sys.path.insert(0, "sort")
@@ -74,13 +76,19 @@ def count_vehicles_webcam(
         (97, 255, 0),
         (0, 255, 16),
     ]
+    xdata = []
+    ydata = []
 
     # * initialize the lanes if there's a configuration file (lanes.csv)
     if os.path.exists(CSV_CONFIGURATION_PATH):
         with open(CSV_CONFIGURATION_PATH, "r") as csvFile:
             csvLanes = csv.reader(csvFile)
+            csvLanes = list(csvLanes)
 
             print("Initializing lanes with lanes.csv")
+
+            if number_of_lanes == -1:
+                number_of_lanes = len(csvLanes)
 
             for laneNumber, csvLane in enumerate(csvLanes, 1):
                 # converts the format from the csv
@@ -88,7 +96,6 @@ def count_vehicles_webcam(
                 # [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
                 # which is the format expected by Lane class
                 formattedLane = list(divideChunks([int(l) for l in csvLane], 2))
-
                 if laneNumber <= number_of_lanes:
                     lanes.append(
                         Lane(
@@ -98,6 +105,8 @@ def count_vehicles_webcam(
                             thickness=2,
                         )
                     )
+                    xdata.append(np.empty((0,), dtype=np.float64))
+                    ydata.append(np.empty((0,), dtype=bool))
                 else:
                     break
 
@@ -110,27 +119,23 @@ def count_vehicles_webcam(
     # cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     # cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-    # Define a function to run when the timer expires
-    def timer_handler():
-        print("Timer expired!")
-        for lane in lanes:
-            print(lane.getOutputValue())
-        # Restart the timer
-        timer = threading.Timer(0.25, timer_handler)
-        timer.start()
-        return
-
-    # Set up a timer using the Timer class
-    timer = threading.Timer(0.25, timer_handler)
-
-    # Start the timer
-    timer.start()
-
     cam = cv2.VideoCapture(1)  # ! use this this for OBS virtualCam
 
     frameNumber = 0
     videoFpsAvg = 0
     key = cv2.waitKey(1)
+
+    # Create an empty plot with n_lanes lines
+    matplotlib.use("TkAgg")
+    plt.ion()
+    fig, axs = plt.subplots(number_of_lanes)
+    # lines = [ax.plot([], [])[0] for _ in range(number_of_lanes)]
+    fig.canvas.draw()
+    plt.show(block=False)
+
+    # rolling window size
+    repeat_length = 20
+
     while True:
         ret, frame = cam.read()
 
@@ -143,6 +148,8 @@ def count_vehicles_webcam(
         # press "l" to draw lanes
         if key == ord("l"):
             lanes = []
+            xdata = []
+            ydata = []
             for i in range(number_of_lanes):
                 # delete the old configuration file at start
                 if i == 0 and os.path.exists(CSV_CONFIGURATION_PATH):
@@ -160,6 +167,8 @@ def count_vehicles_webcam(
                         thickness=2,
                     )
                 )
+                xdata.append(np.empty((0,), dtype=np.float64))
+                ydata.append(np.empty((0,), dtype=bool))
                 # save the lane configuration in a csv file
                 with open(CSV_CONFIGURATION_PATH, "a", newline="") as csvFile:
                     csvWriter = csv.writer(csvFile)
@@ -201,8 +210,7 @@ def count_vehicles_webcam(
         # * generate output signal
         for lane in lanes:
             # check if there is any vehicle in the lane
-            # lane.setIsOccupiedNow(False, -1)
-
+            actualIsOccupied = False
             for trackedVehicle in trackedVehicles:
                 # calculate center points
                 xCenter = (trackedVehicle[0] + trackedVehicle[2]) / 2
@@ -217,21 +225,17 @@ def count_vehicles_webcam(
                     == 1
                 ):
                     # lane is occupied
-                    # lane.updateVehicleList(
-                    #    trackedVehicle[-1]
-                    # )  # add vehicle ID to the list
-                    # lane.setIsOccupiedNow(True, trackedVehicle[-1])
+                    actualIsOccupied = True
                     actualDetectedId = trackedVehicle[-1]
-                    lastDetectedId = lane.getLastDetectedId
-                    lastIsOccupied = lane.getLastIsOccupied
+                    lastDetectedId = lane.getLastDetectedId()
+                    lastIsOccupied = lane.getLastIsOccupied()
                     if lastDetectedId == actualDetectedId and lastIsOccupied == False:
                         lane.correctBackwards(actualDetectedId)
                     lane.updateIsOccupied(True, actualDetectedId, frameTime)
                     lastIsOccupied = True
                     break
-
-            # lane.updateOutputSignal(frameTime)
-            lane.updateIsOccupied(False, -1, frameTime)
+            if actualIsOccupied == False:
+                lane.updateIsOccupied(False, -1, frameTime)
 
         # * log times:
         if showLogTimes:
@@ -333,16 +337,57 @@ def count_vehicles_webcam(
                 cv2.imshow("detections", frame)
                 key = cv2.waitKey(1)
 
-    # matplotlib.use("TkAgg")
-    # fig, axs = plt.subplots(number_of_lanes)
-    # for idx, lane in enumerate(lanes):
-    #     axs[idx].plot(
-    #         np.array(lane.getOutputSignal())[:, 0],
-    #         np.array(lane.getOutputSignal())[:, 1],
-    #         label=lane.number,
-    #     )
-    #     axs[idx].set_title("Lane {}".format(lane.number))
-    # plt.show()
+        # matplotlib.use("TkAgg")
+        # fig, axs = plt.subplots(number_of_lanes)
+        # for idx, lane in enumerate(lanes):
+        #     axs[idx].plot(
+        #         np.array(lane.getOutputSignal())[:, 0],
+        #         np.array(lane.getOutputSignal())[:, 1],
+        #         label=lane.number,
+        #     )
+        #     axs[idx].set_title("Lane {}".format(lane.number))
+        # setup figure
 
-    # Cancel the timer
-    timer.cancel()
+        if lanes[0].buffer.isFull():
+            # matplotlib.use("TkAgg")
+            # axs = fig.subplots(number_of_lanes)
+            for idx, lane in enumerate(lanes):
+                # xdata[idx].append(lane.getOutputValue()["timeStamp"])
+                # ydata[idx].append(lane.getOutputValue()["isOccupied"])
+                auxValue = lane.getOutputValue()
+                xdata[idx] = np.append(
+                    xdata[idx][-repeat_length + 1 :], auxValue["timeStamp"]
+                )
+                ydata[idx] = np.append(
+                    ydata[idx][-repeat_length + 1 :],
+                    auxValue["isOccupied"],
+                )
+                # axs[idx].set_xlim([0, repeat_length])
+                # axs[idx].set_ylim([0, 1])
+                # ax[idx].plot(
+                #    lane.getOutputValue()["timeStamp"],
+                #    lane.getOutputValue()["isOccupied"],
+                #    label=lane.getLaneID(),
+                # )
+                # print(f"X:{xdata[idx]}, Y:{ydata[idx]}")
+                # lines[idx].set_data(
+                #    xdata[idx][-repeat_length:], ydata[idx][-repeat_length:]
+                # )
+                axs[idx].plot(
+                    xdata[idx][-repeat_length:],
+                    ydata[idx][-repeat_length:],
+                    label=lane.getLaneID(),
+                )
+                # Set the plot limits and labels
+                # axs[idx].set_xlim(0, repeat_length)
+                # axs[idx].set_ylim(0, 1)
+                axs[idx].set_xlabel("Time (s)")
+                axs[idx].set_ylabel("Data")
+
+                # ax.draw_artist(lines[idx])
+                n = lane.getLaneID()
+                # ax[idx].set_title(f"Lane {n}")
+
+            fig.canvas.draw()
+            fig.canvas.flush_events()
+            plt.pause(0.001)
