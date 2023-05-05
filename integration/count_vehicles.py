@@ -1,6 +1,7 @@
 from count_vehicles_images import count_vehicles_images as imagesStream
 from count_vehicles_webcam import count_vehicles_webcam as webcamStream
 import argparse
+import time
 
 
 def parse_args():
@@ -34,7 +35,7 @@ def parse_args():
         "--save_video", help="Save video with results.", type=bool, default=False
     )
     parser.add_argument(
-        "--output_video_path", help="Specify output video path.", type=str, default="./"
+        "--output_video_path", help="Specify output video path.", type=str, default="./videos/out_{}.mp4".format(time.time())
     )
     parser.add_argument(
         "--showLogTimes",
@@ -67,10 +68,14 @@ def parse_args():
         default=1,
     )
     parser.add_argument(
-        "--number_of_lanes", help="Number of lanes to measure.", type=int, default=1
+        "--number_of_lanes", help="Number of lanes to measure.", type=int, default=-1
     )
     parser.add_argument(
-        "--fps", help="Aproximate fps of the selected stream.", type=int, default=30
+        "--fps", help="Aproximate fps of the selected stream.", type=int, default=10
+    )
+
+    parser.add_argument(
+        "--show_plot_live", help="Show in real time (only buffer delay) the output of each lane. Notice that this feature makes the fps to drop significantly.", type=bool, default=False
     )
 
     args = parser.parse_args()
@@ -78,7 +83,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
-
     args = parse_args()
     print(args)
 
@@ -98,6 +102,7 @@ if __name__ == "__main__":
             min_hits=args.min_hits,
             number_of_lanes=args.number_of_lanes,
             fps=args.fps,
+            show_plot_live=args.show_plot_live
         )
     # ! Some functionalities available in "webcam" stream may not be implemented in "images" stream yet
     elif args.stream == "images":

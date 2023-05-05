@@ -152,6 +152,7 @@ def detections2Sort(predictionsPath, outPath, outName, imgShape):
     out_file.write(out_csv)
     out_file.close()
 
+
 # split list "l" into chunks of size "n"
 def divideChunks(l, n):
     for i in range(0, len(l), n):
@@ -235,73 +236,98 @@ class DrawLaneCoordinates(object):
 
 
 class Lane(object):
-    def __init__(self, coordinates, number, color=(255, 0, 0), thickness=2):
-        self.color = color
-        self.coordinates = coordinates
-        self.isOccupiedNow = False
-        self.isOccupiedPrev = False
-        self.isVehicle = False
-        self.number = number
-        self.occupyIdNow = -1
-        self.occupyIdPrev = -1
-        self.outputSignal = []  # [(timestamp, isOccupiedNow)]
-        self.thickness = thickness
-        self.vehicleList = set()
-        self.vehicleId = -1
+    def __init__(
+        self, coordinates, laneId, color=(255, 0, 0), thickness=2, buff_size=20
+    ):
+        # plot and coordinates atributes
+        self.color = color  # lane's color in the plot
+        self.thickness = thickness  # lane's thickness in the plot
+        self.coordinates = coordinates  # lane's coordinates in the image/video
+        # signal atributes
+        self.laneId = laneId  # lane's unique ID
+        self.buffer = Buffer(buff_size)
+        self.vehicleList = set()  # set with uniques IDs
+        self.lastDetectedId = -1  # save the last value real vehicle (!= '-1')
+        self.lastIsOccupied = False  # save the last value flag of Occupied
 
     def getCoordinates(self):
         return self.coordinates
 
-    def getNumber(self):
-        return self.number
+    def getLaneId(self):
+        return self.laneId
 
-    def getOutputSignal(self):
-        return self.outputSignal
+    def popFirstValue(self):
+        return self.buffer.Dequeue()
 
-    def getVehicleCount(self):
+    def getVehicleListCount(self):
         return len(self.vehicleList)
 
-    def updateOutputSignal(self, frameTime):
-        self.outputSignal.append((frameTime, int(self.isOccupiedNow)))
+    def updateIsOccupied(self, isOccupied, id, timeStamp):
+        self.vehicleList.add(id)  # add vehicleID to the list
+        self.buffer.Enqueue(isOccupied, id, timeStamp)  # add sample to the Signal
+        self.lastIsOccupied = isOccupied  # save the flag
+        if id != -1:
+            self.lastDetectedId = id  # save the last value
 
-    def updateVehicleList(self, vehicleId):
-        self.vehicleList.add(vehicleId)
+    def getLastDetectedId(self):
+        return self.lastDetectedId
 
-    def setIsOccupiedNow(self, isOccupied, id):
-        self.isOccupiedNow = isOccupied
-        self.occupyIdNow = id
+    def getLastIsOccupied(self):
+        return self.lastIsOccupied
+    
+    def correctBackwards(self, id):
+        self.buffer.SwitchValuesToLastDifferent(True, id)
 
-    def setIsOccupiedPrev(self, isOccupied, id):
-        self.isOccupiedPrev = isOccupied
-        self.occupyIdPrev = id
+class Buffer(object):
+    def __init__(self, capacity=50):
+        self.capacity = capacity  # indicates the maximum size of the buffer
+        self.actualSize = 0  # indicates the actual size of the buffer
+        self.data = (
+            []
+        )  # List of dictionaries {"isOccupied": isOccupied, "vehicleId": id,"timeStamp": timeStamp}
 
+    def Enqueue(self, isOccupied, vehicleID, timeStamp):
+        if len(self.data) == self.capacity:
+            raise Exception("Buffer full. First Dequeue")
 
-# ! PENSAR COMO ARMAR ESTO
-class Vehicle(object):
-    """
-    h: height
-    w: width
-    (x1,y1): top left corner
-    (x2,y2): bottom right corner
-    (x,y): center point
+        else:
+            self.data.append(
+                {
+                    "isOccupied": isOccupied,
+                    "vehicleId": vehicleID,
+                    "timeStamp": timeStamp,
+                }
+            )
+            self.actualSize += 1
 
-    x1,y1------------
-    |               |
-    |      x,y      |
-    |               |
-    ------------x2,y2
-    """
+    def Dequeue(self):
+        if len(self.data) == 0:
+            print("Buffer empty. First Enqueue some item")
+            return None
 
-    def __init__(self, x1, y1, x2, y2, id):
-        self.h = y2 - y1
-        self.w = x2 - x1
-        self.x = (x1 + x2) / 2
-        self.x1 = x1
-        self.x2 = x2
-        self.y = (y1 + y2) / 2
-        self.y1 = y1
-        self.y2 = y2
+        else:
+            self.actualSize -= 1
+            return self.data.pop(0)
 
+    def isFull(self):
+        if len(self.data) == self.capacity:
+            return True
 
-# class VirtualLoop(object):
-#     def __init__(self):
+        else:
+            return False
+
+    def SwitchValuesToLastDifferent(self, valueToSet, idToSet):
+        if len(self.data) == 0:
+            return
+
+        valueToSwitch = self.data[-1]["isOccupied"]
+
+        for index in range(len(self.data) - 1):
+            if self.data[-1 - index]["isOccupied"] == valueToSwitch:
+                self.data[-1 - index]["isOccupied"] = valueToSet
+                self.data[-1 - index]["vehicleId"] = idToSet
+                index += 1
+            else:
+                break
+
+        return
