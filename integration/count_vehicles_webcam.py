@@ -1,8 +1,9 @@
+import matplotlib
 from matplotlib import pyplot as plt
+import matplotlib.animation as animation
 from ultralytics import YOLO
 import csv
 import cv2
-import matplotlib
 import numpy as np
 import os
 import sys
@@ -32,6 +33,7 @@ def count_vehicles_webcam(
     min_hits,
     number_of_lanes,
     fps,
+    show_plot_live
 ):
     # * load  detection model and configuration
     if is_yolov8:
@@ -48,21 +50,6 @@ def count_vehicles_webcam(
         max_age=max_age, min_hits=min_hits, iou_threshold=iou_threshold_tracking
     )
 
-    # load images/video/webcam
-    # testImg = "videos/5fps/puente_BA_centro_lejos_1_5fps/images/puente_BA_centro_lejos_1_5fps_0.jpg"
-    # testFolder = "videos/5fps/puente_BA_centro_lejos_1_5fps/images"
-
-    # ! fix code to save video
-    # if save_video:
-    #     video_shape = list(cv2.imread(testImg).shape)[:-1] # video_shape = (height, width)
-    #     video_shape.reverse()
-    #     video = cv2.VideoWriter(
-    #         output_video_path,
-    #         cv2.VideoWriter_fourcc(*"mp4v"),
-    #         fps,
-    #         video_shape,
-    #     )
-
     # configure lanes
     lanes = []
     colors = [
@@ -73,13 +60,19 @@ def count_vehicles_webcam(
         (97, 255, 0),
         (0, 255, 16),
     ]
+    xData = []
+    yData = []
 
     # * initialize the lanes if there's a configuration file (lanes.csv)
     if os.path.exists(CSV_CONFIGURATION_PATH):
         with open(CSV_CONFIGURATION_PATH, "r") as csvFile:
             csvLanes = csv.reader(csvFile)
+            csvLanes = list(csvLanes)
 
             print("Initializing lanes with lanes.csv")
+
+            if number_of_lanes == -1:
+                number_of_lanes = len(csvLanes)
 
             for laneNumber, csvLane in enumerate(csvLanes, 1):
                 # converts the format from the csv
@@ -87,31 +80,58 @@ def count_vehicles_webcam(
                 # [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
                 # which is the format expected by Lane class
                 formattedLane = list(divideChunks([int(l) for l in csvLane], 2))
-
                 if laneNumber <= number_of_lanes:
                     lanes.append(
                         Lane(
                             coordinates=formattedLane,
-                            number=laneNumber,
+                            laneId=laneNumber,
                             color=colors[laneNumber - 1],
                             thickness=2,
                         )
                     )
+                    xData.append(np.empty((0,), dtype=np.float64))
+                    yData.append(np.empty((0,), dtype=bool))
                 else:
                     break
 
             csvFile.close()
 
     # webcam stream
-    # cam = cv2.VideoCapture(1)  # ! use this this for OBS virtualCam
-    cam = cv2.VideoCapture("udp://192.168.0.7:9999")
+    cam = cv2.VideoCapture(1)  # ! use this this for OBS virtualCam
+    # cam = cv2.VideoCapture("udp://192.168.0.7:9999")
     cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
+    if save_video:
+        ret, frame = cam.read()
+        video_shape = list(frame.shape)[:-1] # video_shape = (height, width)
+        video_shape.reverse()
+        video = cv2.VideoWriter(
+            output_video_path,
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            fps,
+            video_shape,
+        )
+
     frameNumber = 0
     videoFpsAvg = 0
     key = cv2.waitKey(1)
+
+    # Create an empty plot with number_of_lanes lines
+    if show_plot_live:
+        matplotlib.use("TkAgg")
+        plt.ion()
+        fig, axs = plt.subplots(number_of_lanes)
+        for idx, ax in enumerate(axs, 1):
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("Lane " + str(idx))
+        fig.canvas.draw()
+        plt.show(block=False)
+
+        # the size of the window will detrmine how many points we see in the plot
+        plotWindowSize = 50
+
     while True:
         ret, frame = cam.read()
 
@@ -124,6 +144,8 @@ def count_vehicles_webcam(
         # press "l" to draw lanes
         if key == ord("l"):
             lanes = []
+            xData = []
+            yData = []
             for i in range(number_of_lanes):
                 # delete the old configuration file at start
                 if i == 0 and os.path.exists(CSV_CONFIGURATION_PATH):
@@ -136,11 +158,13 @@ def count_vehicles_webcam(
                 lanes.append(
                     Lane(
                         coordinates=laneCoordinates.coordinates,
-                        number=laneNumber,
+                        laneId=laneNumber,
                         color=colors[i],
                         thickness=2,
                     )
                 )
+                xData.append(np.empty((0,), dtype=np.float64))
+                yData.append(np.empty((0,), dtype=bool))
                 # save the lane configuration in a csv file
                 with open(CSV_CONFIGURATION_PATH, "a", newline="") as csvFile:
                     csvWriter = csv.writer(csvFile)
@@ -182,8 +206,7 @@ def count_vehicles_webcam(
         # * generate output signal
         for lane in lanes:
             # check if there is any vehicle in the lane
-            lane.setIsOccupiedNow(False, -1)
-
+            actualIsOccupied = False
             for trackedVehicle in trackedVehicles:
                 # calculate center points
                 xCenter = (trackedVehicle[0] + trackedVehicle[2]) / 2
@@ -198,12 +221,17 @@ def count_vehicles_webcam(
                     == 1
                 ):
                     # lane is occupied
-                    lane.updateVehicleList(
-                        trackedVehicle[-1]
-                    )  # add vehicle ID to the list
-                    lane.setIsOccupiedNow(True, trackedVehicle[-1])
-
-            lane.updateOutputSignal(frameTime)
+                    actualIsOccupied = True
+                    actualDetectedId = trackedVehicle[-1] # the last column contains the ID of the SORT tracking
+                    lastDetectedId = lane.getLastDetectedId()
+                    lastIsOccupied = lane.getLastIsOccupied()
+                    if lastDetectedId == actualDetectedId and lastIsOccupied == False:
+                        lane.correctBackwards(actualDetectedId)
+                    lane.updateIsOccupied(True, actualDetectedId, frameTime)
+                    lastIsOccupied = True
+                    break
+            if actualIsOccupied == False:
+                lane.updateIsOccupied(False, -1, frameTime)
 
         # * log times:
         if showLogTimes:
@@ -215,6 +243,32 @@ def count_vehicles_webcam(
                 "Detection time: {} ms".format(round((t1 - t0) * 1000, 3)),
                 "Tracking time: {} ms".format(round((t3 - t2) * 1000, 3)),
             )
+
+        if lanes[0].buffer.isFull():
+                for idx, lane in enumerate(lanes):
+                    # dequeue values from the buffer
+                    auxValue = lane.popFirstValue()
+
+                    if show_plot_live:
+                        xData[idx] = np.append(
+                            xData[idx][-plotWindowSize + 1 :], auxValue["timeStamp"]
+                        )
+                        yData[idx] = np.append(
+                            yData[idx][-plotWindowSize + 1 :],
+                            auxValue["isOccupied"],
+                        )
+                        axs[idx].cla()
+                        axs[idx].plot(
+                            xData[idx][-plotWindowSize:],
+                            yData[idx][-plotWindowSize:],
+                            label=lane.getLaneId(),
+                        )
+                        # Set the plot labels
+                        axs[idx].set_xlabel("Time (s)")
+                        axs[idx].set_ylabel("Lane " + str(lane.getLaneId()))
+
+                if show_plot_live:
+                    plt.pause(0.00001)
 
         # * display results and save video
         if display or save_video:
@@ -229,8 +283,10 @@ def count_vehicles_webcam(
                 )
                 cv2.putText(
                     img=frame,
-                    text="Lane {}: {}".format(lane.getNumber(), lane.getVehicleCount()),
-                    org=(30, lane.number * 30),
+                    text="Lane {}: {}".format(
+                        lane.getLaneId(), lane.getVehicleListCount()
+                    ),
+                    org=(30, lane.getLaneId() * 30),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=1,
                     color=lane.color,
@@ -284,33 +340,21 @@ def count_vehicles_webcam(
                 ) + videoFPS / (frameNumber)
                 cv2.putText(
                     img=frame,
-                    text="FPS intant: {}".format(round(videoFPS, 2)),
-                    org=(640 - 10, 30),
+                    text="FPS instant:  {:.2f}".format(round(videoFPS, 2)),
+                    org=(640 - 200, 30),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=1,
+                    fontScale=1 * 0.6,
                     color=(0, 171, 255),
                     thickness=2,
                 )
                 cv2.putText(
                     img=frame,
-                    text="FPS average: {}".format(round(videoFpsAvg, 2)),
-                    org=(640 - 10, 60),
+                    text="FPS average: {:.2f}".format(round(videoFpsAvg, 2)),
+                    org=(640 - 200, 60),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=1,
+                    fontScale=1 * 0.6,
                     color=(0, 171, 255),
                     thickness=2,
                 )
                 cv2.imshow("detections", frame)
                 key = cv2.waitKey(1)
-
-
-# matplotlib.use("TkAgg")
-# fig, axs = plt.subplots(number_of_lanes)
-# for idx, lane in enumerate(lanes):
-#     axs[idx].plot(
-#         np.array(lane.getOutputSignal())[:, 0],
-#         np.array(lane.getOutputSignal())[:, 1],
-#         label=lane.number,
-#     )
-#     axs[idx].set_title("Lane {}".format(lane.number))
-# plt.show()
