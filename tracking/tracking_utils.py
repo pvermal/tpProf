@@ -256,7 +256,7 @@ class Lane(object):
     def getLaneID(self):
         return self.laneID
 
-    def getOutputValue(self):  # A REVISAR ESTA ACCION, SU NOMBRE Y SU COMPORTAMIENTO
+    def popFirstValue(self):
         return self.buffer.Dequeue()
 
     def getVehicleListCount(self):
@@ -308,10 +308,7 @@ class Buffer(object):
 
         else:
             self.actualSize -= 1
-            retValue = self.data[0]
-            del self.data[0]
-            return retValue
-            # return self.data.pop(0)
+            return self.data.pop(0)
 
     def isFull(self):
         if len(self.data) == self.capacity:
@@ -329,7 +326,7 @@ class Buffer(object):
         for index in range(len(self.data) - 1):
             if self.data[-1 - index]["isOccupied"] == valueToSwitch:
                 self.data[-1 - index]["isOccupied"] = valueToSet
-                self.data[-1 - index]["isOccupied"] = idToSet
+                self.data[-1 - index]["vehicleId"] = idToSet
                 index += 1
             else:
                 break
