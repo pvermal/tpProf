@@ -25,7 +25,7 @@ project_name = "./runs/detect"
 
 
 yolov5Params = "python3 ./yolov5/detect.py --source " + source_path + " --save-conf --save-txt --agnostic-nms --classes 2 3 5 7 --project " + project_name + " --weights ./yolov5/"
-yolov5Models = ["yolov5n.pt", "yolov5s.pt"]#, "yolov5m.pt"]#, "yolov5l.pt"]#, "yolov5x.pt"]
+yolov5Models = ["yolov5n.pt", "yolov5s.pt"]#, "yolov5m.pt"]#, "yolov5l.pt"]#, "yolov5x.pt"] #Descartamos estos modelos porque tiraban problema de memoria en al Jetson y relantizaban el procesamiento (a veces crasheaba directamente)
 name = " --name "
 
 # * run yolov5 models
@@ -44,7 +44,7 @@ if runYolov5:
 ################################
        
 yolov6Params = "python3 ./YOLOv6/tools/infer.py --source "+source_path+" --conf-thres 0.25 --save-txt --agnostic-nms --classes 2 3 5 7 --project " + project_name + " --weights ./YOLOv6/"
-yolov6Models = ["yolov6n.pt"]#, "yolov6s.pt", "yolov6m.pt"]#, "yolov6l.pt"]#, "yolov6x.pt"]
+yolov6Models = ["yolov6n.pt"]#, "yolov6s.pt", "yolov6m.pt"]#, "yolov6l.pt"]#, "yolov6x.pt"] #Descartamos estos modelos porque tiraban problema de memoria en al Jetson y relantizaban el procesamiento (a veces crasheaba directamente)
 name = " --name "
 
 # * run yolov6 models
@@ -61,9 +61,7 @@ if runYolov6:
 ################################
 
 yolov7Params = "python3 ./yolov7/detect.py --source "+source_path+" --conf 0.25 --img-size 640 --save-conf --save-txt --agnostic-nms --class 2 3 5 7 --project " + project_name + " --weights ./yolov7/"
-#yolov7Params = "python ./yolov7/detect.py --source ./YOLOv6/data/images --conf 0.25 --img-size 640 --save-conf --save-txt --agnostic-nms --class 2 3 5 7 --weights "
-yolov7Models = ["yolov7-tiny.pt"]#, "yolov7.pt"]#, "yolov7x.pt"]
-#yolov7Models = ["yolov7-tiny.pt"]
+yolov7Models = ["yolov7-tiny.pt"]#, "yolov7.pt"]#, "yolov7x.pt"] #Descartamos estos modelos porque tiraban problema de memoria en al Jetson y relantizaban el procesamiento (a veces crasheaba directamente)
 
 # * run yolov7 models
 if runYolov7:
@@ -78,7 +76,7 @@ if runYolov7:
 ############ YOLOV8 ############
 ################################
 
-yolov8Models = ["yolov8n.pt"]#, "yolov8s.pt", "yolov8m.pt"]#, "yolov8l.pt"]#, "yolov8x.pt"]
+yolov8Models = ["yolov8n.pt"]#, "yolov8s.pt", "yolov8m.pt"]#, "yolov8l.pt"]#, "yolov8x.pt"] #Descartamos estos modelos porque tiraban problema de memoria en al Jetson y relantizaban el procesamiento (a veces crasheaba directamente)
 
 # * run yolov8 models
 if runYolov8:
