@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-i = sys.argv[1]
+i = sys.argv[1] #este argumento es para poder hacer multiples corridas desde otro script llamando a este, con el número de corrida, para dejar los resultados en carpetas distintas numeradas
 
 sys.path.insert(0, "ultralytics")
 
