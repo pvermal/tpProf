@@ -22,8 +22,8 @@ def scoreTestingData(predictionsPath, labelsPath, imagesPath):
         imgPath = os.path.join(imagesPath, filename).replace(".txt", ".jpg")
 
         if os.path.isfile(filePredicted) and os.path.isfile(fileTrue):
-            logging.basicConfig(level=logging.INFO)
-            logging.info("Calculando IoU para: %s", imgPath)
+            #logging.basicConfig(level=logging.INFO)
+            #logging.info("Calculando IoU para: %s", imgPath)
 
             iouScore, qtyPredicted, qtyTrue = iou.iouScore(
                 filePredicted, fileTrue, imgPath

@@ -219,11 +219,11 @@ def iouScore(filePredicted, fileTrue, imgPath):
     # menos predicciones que verdades
     elif lenPredicted < lenTrue:
         iouScoreArray = np.sort(iouScoreArray)
-        iouScore = np.sum(iouScoreArray[1:]) / lenTrue
+        iouScore = np.sum(iouScoreArray[0:]) / lenTrue
 
     # mas predicciones que verdades
     else:
         iouScoreArray = np.sort(iouScoreArray)
-        iouScore = np.sum(iouScoreArray[1:]) / lenPredicted
+        iouScore = np.sum(iouScoreArray[0:]) / lenPredicted
 
     return iouScore, lenPredicted, lenTrue
