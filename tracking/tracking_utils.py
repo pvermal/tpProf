@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 import os
-
+import Jetson.GPIO as GPIO
+import time
 
 def box(img, x, y, h, w, id, color=(0, 0, 255), thickness=1, printXY=False):
     """
@@ -331,3 +332,55 @@ class Buffer(object):
                 break
 
         return
+        
+GPIO.setmode(GPIO.BOARD)
+gPin1 = 7
+gPin2 = 11
+gPin3 = 12
+gPin4 = 13
+pinArray = [ gPin1 , gPin2 , gPin3 , gPin4 ]
+
+class VirtualLoop(object):
+    def __init__(
+        self, coordinates, virtualLoopId, color=(255, 0, 0), thickness=2, buff_size=20
+    ):
+        #Lane atribute
+        self.lane = Lane(
+        			coordinates=coordinates,
+        			laneId=virtualLoopId,
+        			color=color,
+        			thickness=thickness
+        )
+        self.pin = pinArray[virtualLoopId-1]
+        GPIO.setmode(GPIO.BOARD) #Set GPIO Mode (for pins enumerations)
+        GPIO.setup( self.pin , GPIO.OUT ) #Set PIN as Output
+
+    def getCoordinates(self):
+        return self.lane.getCoordinates()
+
+    def getVirtualLoopId(self):
+        return self.lane.getLaneId()
+
+    def popFirstValue(self):
+    	retValue = self.lane.buffer.Dequeue()
+    	if retValue["isOccupied"] == True:
+    	    	GPIO.output( self.pin , GPIO.HIGH)
+    	else:
+    	    	GPIO.output( self.pin , GPIO.LOW)
+
+    	return retValue
+        
+    def getVehicleListCount(self):
+        return len(self.lane.vehicleList)
+
+    def updateIsOccupied(self, isOccupied, id, timeStamp):
+        self.lane.updateIsOccupied( isOccupied, id, timeStamp)
+
+    def getLastDetectedId(self):
+        return self.lane.lastDetectedId
+
+    def getLastIsOccupied(self):
+        return self.lane.lastIsOccupied
+    
+    def correctBackwards(self, id):
+        self.lane.buffer.SwitchValuesToLastDifferent(True, id)
