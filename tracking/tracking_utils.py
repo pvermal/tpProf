@@ -4,6 +4,7 @@ import os
 import Jetson.GPIO as GPIO
 import time
 
+
 def box(img, x, y, h, w, id, color=(0, 0, 255), thickness=1, printXY=False):
     """
     Recibe una imagen, las coordenadas para dibujar la caja y el numero de id.
@@ -236,49 +237,6 @@ class DrawLaneCoordinates(object):
             cv2.imshow(self.windowName, self.image)
 
 
-class Lane(object):
-    def __init__(
-        self, coordinates, laneId, color=(255, 0, 0), thickness=2, buff_size=20
-    ):
-        # plot and coordinates atributes
-        self.color = color  # lane's color in the plot
-        self.thickness = thickness  # lane's thickness in the plot
-        self.coordinates = coordinates  # lane's coordinates in the image/video
-        # signal atributes
-        self.laneId = laneId  # lane's unique ID
-        self.buffer = Buffer(buff_size)
-        self.vehicleList = set()  # set with uniques IDs
-        self.lastDetectedId = -1  # save the last value real vehicle (!= '-1')
-        self.lastIsOccupied = False  # save the last value flag of Occupied
-
-    def getCoordinates(self):
-        return self.coordinates
-
-    def getLaneId(self):
-        return self.laneId
-
-    def popFirstValue(self):
-        return self.buffer.Dequeue()
-
-    def getVehicleListCount(self):
-        return len(self.vehicleList)
-
-    def updateIsOccupied(self, isOccupied, id, timeStamp):
-        self.vehicleList.add(id)  # add vehicleID to the list
-        self.buffer.Enqueue(isOccupied, id, timeStamp)  # add sample to the Signal
-        self.lastIsOccupied = isOccupied  # save the flag
-        if id != -1:
-            self.lastDetectedId = id  # save the last value
-
-    def getLastDetectedId(self):
-        return self.lastDetectedId
-
-    def getLastIsOccupied(self):
-        return self.lastIsOccupied
-    
-    def correctBackwards(self, id):
-        self.buffer.SwitchValuesToLastDifferent(True, id)
-
 class Buffer(object):
     def __init__(self, capacity=50):
         self.capacity = capacity  # indicates the maximum size of the buffer
@@ -332,55 +290,116 @@ class Buffer(object):
                 break
 
         return
-        
+
+
+class Lane(object):
+    def __init__(
+        self, coordinates, laneId, color=(255, 0, 0), thickness=2, buff_size=20
+    ):
+        # plot and coordinates atributes
+        self.color = color  # lane's color in the plot
+        self.thickness = thickness  # lane's thickness in the plot
+        self.coordinates = coordinates  # lane's coordinates in the image/video
+        # signal atributes
+        self.laneId = laneId  # lane's unique ID
+        self.buffer = Buffer(buff_size)
+        self.vehicleList = set()  # set with uniques IDs
+        self.lastDetectedId = -1  # save the last value real vehicle (!= '-1')
+        self.lastIsOccupied = False  # save the last value flag of Occupied
+
+    def getCoordinates(self):
+        return self.coordinates
+
+    def getLaneId(self):
+        return self.laneId
+
+    def popFirstValue(self):
+        return self.buffer.Dequeue()
+
+    def getVehicleListCount(self):
+        return len(self.vehicleList)
+
+    def updateIsOccupied(self, isOccupied, id, timeStamp):
+        self.vehicleList.add(id)  # add vehicleID to the list
+        self.buffer.Enqueue(isOccupied, id, timeStamp)  # add sample to the Signal
+        self.lastIsOccupied = isOccupied  # save the flag
+        if id != -1:
+            self.lastDetectedId = id  # save the last value
+
+    def getLastDetectedId(self):
+        return self.lastDetectedId
+
+    def getLastIsOccupied(self):
+        return self.lastIsOccupied
+
+    def correctBackwards(self, id):
+        self.buffer.SwitchValuesToLastDifferent(True, id)
+
+
 GPIO.setmode(GPIO.BOARD)
 gPin1 = 7
 gPin2 = 11
 gPin3 = 12
 gPin4 = 13
-pinArray = [ gPin1 , gPin2 , gPin3 , gPin4 ]
+pinArray = [gPin1, gPin2, gPin3, gPin4]
 
-class VirtualLoop(object):
+
+class VirtualLoop(Lane):
     def __init__(
         self, coordinates, virtualLoopId, color=(255, 0, 0), thickness=2, buff_size=20
     ):
-        #Lane atribute
-        self.lane = Lane(
-        			coordinates=coordinates,
-        			laneId=virtualLoopId,
-        			color=color,
-        			thickness=thickness
+        # ! BORRAR: Queda inicializado usando el __init__ de la clase Lane
+        # # Lane atribute
+        # self.lane = Lane(
+        #     coordinates=coordinates,
+        #     laneId=virtualLoopId,
+        #     color=color,
+        #     thickness=thickness,
+        # )
+        Lane.__init__(
+            self,
+            coordinates=coordinates,
+            laneId=virtualLoopId,
+            color=color,
+            thickness=thickness,
         )
-        self.pin = pinArray[virtualLoopId-1]
-        GPIO.setmode(GPIO.BOARD) #Set GPIO Mode (for pins enumerations)
-        GPIO.setup( self.pin , GPIO.OUT ) #Set PIN as Output
+        self.pin = pinArray[virtualLoopId - 1]
+        GPIO.setmode(GPIO.BOARD)  # Set GPIO Mode (for pins enumerations)
+        GPIO.setup(self.pin, GPIO.OUT)  # Set PIN as Output
 
-    def getCoordinates(self):
-        return self.lane.getCoordinates()
+    # ! BORRAR: Hereda este atributo de Lane
+    # def getCoordinates(self):
+    #     return self.lane.getCoordinates()
 
-    def getVirtualLoopId(self):
-        return self.lane.getLaneId()
+    # ! BORRAR: Hereda este atributo de Lane
+    # def getVirtualLoopId(self):
+    #     return self.lane.getLaneId()
 
     def popFirstValue(self):
-    	retValue = self.lane.buffer.Dequeue()
-    	if retValue["isOccupied"] == True:
-    	    	GPIO.output( self.pin , GPIO.HIGH)
-    	else:
-    	    	GPIO.output( self.pin , GPIO.LOW)
+        retValue = self.lane.buffer.Dequeue()
 
-    	return retValue
-        
-    def getVehicleListCount(self):
-        return len(self.lane.vehicleList)
+        GPIO.output(self.pin, GPIO.HIGH) if retValue["isOccupied"] else GPIO.output(
+            self.pin, GPIO.LOW
+        )
 
-    def updateIsOccupied(self, isOccupied, id, timeStamp):
-        self.lane.updateIsOccupied( isOccupied, id, timeStamp)
+        return retValue
 
-    def getLastDetectedId(self):
-        return self.lane.lastDetectedId
+    # ! BORRAR: Hereda este atributo de Lane
+    # def getVehicleListCount(self):
+    #     return len(self.lane.vehicleList)
 
-    def getLastIsOccupied(self):
-        return self.lane.lastIsOccupied
-    
-    def correctBackwards(self, id):
-        self.lane.buffer.SwitchValuesToLastDifferent(True, id)
+    # ! BORRAR: Hereda este atributo de Lane
+    # def updateIsOccupied(self, isOccupied, id, timeStamp):
+    #     self.lane.updateIsOccupied(isOccupied, id, timeStamp)
+
+    # ! BORRAR: Hereda este atributo de Lane
+    # def getLastDetectedId(self):
+    #     return self.lane.lastDetectedId
+
+    # ! BORRAR: Hereda este atributo de Lane
+    # def getLastIsOccupied(self):
+    #     return self.lane.lastIsOccupied
+
+    # ! BORRAR: Hereda este atributo de Lane
+    # def correctBackwards(self, id):
+    #     self.lane.buffer.SwitchValuesToLastDifferent(True, id)
