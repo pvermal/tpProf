@@ -51,7 +51,7 @@ def count_vehicles_webcam(
     )
 
     # configure lanes
-    vLoops = []
+    virtualLoops = []
     colors = [
         (255, 63, 0),
         (255, 123, 0),
@@ -74,18 +74,18 @@ def count_vehicles_webcam(
             if number_of_lanes == -1:
                 number_of_lanes = len(csvLanes)
 
-            for vLoopNumber, csvLane in enumerate(csvLanes, 1):
+            for virtualLoopNumber, csvLane in enumerate(csvLanes, 1):
                 # converts the format from the csv
                 # [x1, y1, x2, y2, x3, y3, x4, y4] to
                 # [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
                 # which is the format expected by Lane class
                 formattedLane = list(divideChunks([int(l) for l in csvLane], 2))
-                if vLoopNumber <= number_of_lanes:
-                    vLoops.append(
+                if virtualLoopNumber <= number_of_lanes:
+                    virtualLoops.append(
                         VirtualLoop(
                             coordinates=formattedLane,
-                            virtualLoopId=vLoopNumber,
-                            color=colors[vLoopNumber - 1],
+                            virtualLoopId=virtualLoopNumber,
+                            color=colors[virtualLoopNumber - 1],
                             thickness=2,
                         )
                     )
@@ -146,7 +146,7 @@ def count_vehicles_webcam(
 
         # press "l" to draw lanes
         if key == ord("l"):
-            vLoops = []
+            virtualLoops = []
             xData = []
             yData = []
             for i in range(number_of_lanes):
@@ -154,14 +154,14 @@ def count_vehicles_webcam(
                 if i == 0 and os.path.exists(CSV_CONFIGURATION_PATH):
                     os.remove(CSV_CONFIGURATION_PATH)
 
-                vLoopNumber = i + 1
+                virtualLoopNumber = i + 1
                 laneCoordinates = DrawLaneCoordinates(
                     frame, color=colors[i], thickness=2
                 )
-                vLoops.append(
+                virtualLoops.append(
                     VirtualLoop(
                         coordinates=laneCoordinates.coordinates,
-                        virtualLoopId=vLoopNumber,
+                        virtualLoopId=virtualLoopNumber,
                         color=colors[i],
                         thickness=2,
                     )
@@ -207,7 +207,7 @@ def count_vehicles_webcam(
         t3 = time.time()
 
         # * generate output signal
-        for virtualLoop in vLoops:
+        for virtualLoop in virtualLoops:
             # check if there is any vehicle in the lane
             actualIsOccupied = False
             for trackedVehicle in trackedVehicles:
@@ -247,8 +247,8 @@ def count_vehicles_webcam(
                 "Tracking time: {} ms".format(round((t3 - t2) * 1000, 3)),
             )
 
-        if vLoops[0].lane.buffer.isFull():
-                for idx, virtualLoop in enumerate(vLoops):
+        if virtualLoops[0].buffer.isFull():
+                for idx, virtualLoop in enumerate(virtualLoops):
                     # dequeue values from the buffer
                     auxValue = virtualLoop.popFirstValue()
 
@@ -264,10 +264,10 @@ def count_vehicles_webcam(
                         axs[idx].plot(
                             xData[idx][-plotWindowSize:],
                             yData[idx][-plotWindowSize:],
-                            label=virtualLoop.getVirtualLoopId(),
+                            label=virtualLoop.getLaneId(),
                         )
                         axs[idx].set_xlabel("Time (s)")
-                        axs[idx].set_ylabel("Lane " + str(virtualLoop.getVirtualLoopId()))
+                        axs[idx].set_ylabel("Lane " + str(virtualLoop.getLaneId()))
 
                 if show_plot_live:
                     plt.pause(0.00001)
@@ -275,24 +275,24 @@ def count_vehicles_webcam(
         # * display results and save video
         if display or save_video:
             # plot lanes
-            for virtualLoop in vLoops:
+            for virtualLoop in virtualLoops:
                 cv2.polylines(
                     frame,
-                    [np.asarray(virtualLoop.lane.coordinates)],
+                    [np.asarray(virtualLoop.coordinates)],
                     isClosed=True,
-                    color=virtualLoop.lane.color,
-                    thickness=virtualLoop.lane.thickness,
+                    color=virtualLoop.color,
+                    thickness=virtualLoop.thickness,
                 )
                 cv2.putText(
                     img=frame,
                     text="Lane {}: {}".format(
-                        virtualLoop.getVirtualLoopId(), virtualLoop.getVehicleListCount()
+                        virtualLoop.getLaneId(), virtualLoop.getVehicleListCount()
                     ),
-                    org=(30, virtualLoop.getVirtualLoopId() * 30),
+                    org=(30, virtualLoop.getLaneId() * 30),
                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                     fontScale=1,
-                    color=virtualLoop.lane.color,
-                    thickness=virtualLoop.lane.thickness,
+                    color=virtualLoop.color,
+                    thickness=virtualLoop.thickness,
                 )
             if plot_dets:
                 for detection in detections:

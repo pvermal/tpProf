@@ -336,7 +336,6 @@ class Lane(object):
         self.buffer.SwitchValuesToLastDifferent(True, id)
 
 
-GPIO.setmode(GPIO.BOARD)
 gPin1 = 7
 gPin2 = 11
 gPin3 = 12
@@ -348,14 +347,6 @@ class VirtualLoop(Lane):
     def __init__(
         self, coordinates, virtualLoopId, color=(255, 0, 0), thickness=2, buff_size=20
     ):
-        # ! BORRAR: Queda inicializado usando el __init__ de la clase Lane
-        # # Lane atribute
-        # self.lane = Lane(
-        #     coordinates=coordinates,
-        #     laneId=virtualLoopId,
-        #     color=color,
-        #     thickness=thickness,
-        # )
         Lane.__init__(
             self,
             coordinates=coordinates,
@@ -367,39 +358,11 @@ class VirtualLoop(Lane):
         GPIO.setmode(GPIO.BOARD)  # Set GPIO Mode (for pins enumerations)
         GPIO.setup(self.pin, GPIO.OUT)  # Set PIN as Output
 
-    # ! BORRAR: Hereda este atributo de Lane
-    # def getCoordinates(self):
-    #     return self.lane.getCoordinates()
-
-    # ! BORRAR: Hereda este atributo de Lane
-    # def getVirtualLoopId(self):
-    #     return self.lane.getLaneId()
-
     def popFirstValue(self):
-        retValue = self.lane.buffer.Dequeue()
+        retValue = self.buffer.Dequeue()
 
         GPIO.output(self.pin, GPIO.HIGH) if retValue["isOccupied"] else GPIO.output(
             self.pin, GPIO.LOW
         )
 
         return retValue
-
-    # ! BORRAR: Hereda este atributo de Lane
-    # def getVehicleListCount(self):
-    #     return len(self.lane.vehicleList)
-
-    # ! BORRAR: Hereda este atributo de Lane
-    # def updateIsOccupied(self, isOccupied, id, timeStamp):
-    #     self.lane.updateIsOccupied(isOccupied, id, timeStamp)
-
-    # ! BORRAR: Hereda este atributo de Lane
-    # def getLastDetectedId(self):
-    #     return self.lane.lastDetectedId
-
-    # ! BORRAR: Hereda este atributo de Lane
-    # def getLastIsOccupied(self):
-    #     return self.lane.lastIsOccupied
-
-    # ! BORRAR: Hereda este atributo de Lane
-    # def correctBackwards(self, id):
-    #     self.lane.buffer.SwitchValuesToLastDifferent(True, id)
